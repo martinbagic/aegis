@@ -265,3 +265,54 @@ def test_resume_from_backup_after_corrupt_primary(checkpoint_config, write_confi
     popsize_file = odir / "popsize_before_reproduction.csv"
     lines = popsize_file.read_text().strip().splitlines()
     assert len(lines) == steps, f"Expected {steps} lines, got {len(lines)}"
+# --- appended regression tests for the resume map-corruption bug ---
+
+
+def _phenomap_config(checkpoint_config):
+    """checkpoint config whose genotype->phenotype map is randomly generated
+    (agespec pleiotropy). This is what exposes the resume map-regeneration bug:
+    the map is drawn from np.random at architecture-build time, so rebuilding it
+    on resume (after the RNG has been restored to its mid-run state) yields a
+    different map and silently reinterprets every genome."""
+    return {
+        **checkpoint_config,
+        "GENARCH_TYPE": "modifying",
+        "MODIF_GENOME_SIZE": 200,
+        "BITS_PER_LOCUS": 1,
+        "PLOIDY": 2,
+        "REPRODUCTION_MODE": "sexual",
+        "RANDOM_SEED": 12345,
+        "PHENOMAP": {"APsr, 200": [["surv", "agespec", -0.01], ["repr", "agespec", 0.005]]},
+    }
+
+
+def test_checkpoint_stores_phenomap(checkpoint_config, write_config, tmp_path):
+    """The checkpoint must carry the genotype->phenotype map so resume can restore
+    it instead of regenerating a different one."""
+    config_path = write_config(_phenomap_config(checkpoint_config), name="phenomap_store")
+    odir = tmp_path / config_path.stem
+    aegis_sim.run(custom_config_path=config_path, pickle_path=None, overwrite=False, custom_input_params={})
+
+    cp = Checkpoint.load(odir / "checkpoint")
+    assert getattr(cp, "phenolist", None), "checkpoint does not store the phenolist (map)"
+    assert len(cp.phenolist) > 0
+
+
+def test_resume_preserves_phenomap(checkpoint_config, write_config, tmp_path):
+    """Regression: the genotype->phenotype map must be IDENTICAL across a resume.
+    Before the fix, resume regenerated the map from a shifted RNG stream, changing
+    every entry and corrupting the run."""
+    config_path = write_config(_phenomap_config(checkpoint_config), name="phenomap_resume")
+    odir = tmp_path / config_path.stem
+
+    aegis_sim.run(custom_config_path=config_path, pickle_path=None, overwrite=False, custom_input_params={})
+    map_before = (odir / "phenomap.csv").read_text()
+
+    aegis_sim.run(custom_config_path=config_path, pickle_path=None, overwrite=False,
+                  custom_input_params={}, resume_path=odir)
+    map_after = (odir / "phenomap.csv").read_text()
+
+    assert map_after == map_before, (
+        "genotype->phenotype map changed across resume; it must be restored from the "
+        "checkpoint, not regenerated"
+    )

@@ -114,6 +114,16 @@ def init_resume(resume_path, extend_steps=None):
     parameterization.init_traits(parameterization)
     submodels.init(submodels, parametermanager=parametermanager)
 
+    # Restore the exact genotype->phenotype map the original run used.
+    # The map is drawn from np.random when the architecture is built; because we
+    # have just restored the RNG to its mid-run state, rebuilding it here yields a
+    # DIFFERENT map, silently reinterpreting every genome (the resume corruption bug).
+    # Restore the saved map instead of regenerating it.
+    if getattr(checkpoint, "phenolist", None) is not None:
+        gpm = submodels.architect.architecture.phenomap
+        gpm.phenolist = checkpoint.phenolist
+        gpm._resolved = False  # invalidate cached resolved arrays so they rebuild from the restored map
+
     # Restore envdrift map if it was active
     if checkpoint.envdrift_map is not None:
         submodels.architect.envdrift.map = checkpoint.envdrift_map

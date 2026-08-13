@@ -129,6 +129,7 @@ class Checkpoint:
         resource_capacity: float,
         final_config: dict,
         custom_config_path: pathlib.Path,
+        phenolist=None,
     ):
         self.population = population
         self.eggs = eggs
@@ -141,11 +142,18 @@ class Checkpoint:
         self.resource_capacity = resource_capacity
         self.final_config = final_config
         self.custom_config_path = custom_config_path
+        self.phenolist = phenolist
 
     @classmethod
     def capture(cls, population, eggs, variables, submodels, parametermanager):
         """Capture current simulation state into a Checkpoint."""
         from aegis_sim.submodels.resources.resources import resources
+
+        # The modifying architecture builds its genotype->phenotype map (phenolist)
+        # by drawing from np.random, so it must be restored on resume rather than
+        # regenerated. Architectures without a random map (e.g. composite) -> None.
+        architecture = submodels.architect.architecture
+        phenolist = getattr(getattr(architecture, "phenomap", None), "phenolist", None)
 
         return cls(
             population=population,
@@ -159,6 +167,7 @@ class Checkpoint:
             resource_capacity=resources.capacity,
             final_config=parametermanager.final_config,
             custom_config_path=variables.custom_config_path,
+            phenolist=phenolist,
         )
 
     def save(self, path: pathlib.Path):
