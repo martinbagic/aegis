@@ -81,9 +81,12 @@ class Bioreactor:
         self._kill(mask_kill=mask_kill, causeofdeath="intrinsic")
 
     def mortality_abiotic(self):
-        hazard = submodels.abiotic(variables.steps)
-        age_hazard = submodels.frailty.modify(hazard=hazard, ages=self.population.ages)
-        mask_kill = variables.rng.random(len(self.population)) < age_hazard
+        if submodels.abiotic.ABIOTIC_HAZARD_SHAPE == "instant_deterministic":
+            mask_kill = submodels.abiotic.get_mask_kill(step=variables.steps, ages=self.population.ages)
+        else:
+            hazard = submodels.abiotic(variables.steps)
+            age_hazard = submodels.frailty.modify(hazard=hazard, ages=self.population.ages)
+            mask_kill = variables.rng.random(len(self.population)) < age_hazard
         self._kill(mask_kill=mask_kill, causeofdeath="abiotic")
 
     def mortality_infection(self):

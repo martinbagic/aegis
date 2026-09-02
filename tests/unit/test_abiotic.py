@@ -6,8 +6,10 @@ rejection of unknown shapes.
 """
 
 import math
+import numpy as np
 import pytest
 
+from aegis_sim import variables
 from aegis_sim.submodels.abiotic import Abiotic
 
 
@@ -170,3 +172,60 @@ class TestAbioticInstantDeterministic:
         fatal = _make_abiotic("instant_fatal", offset=0.0, amplitude=1.0, period=50)
         for step in [0, 1, 25, 49, 50, 51, 99, 100]:
             assert det(step) == pytest.approx(fatal(step)), f"Mismatch at step {step}"
+
+
+@pytest.fixture
+def seeded_rng():
+    """Seed the shared RNG so get_mask_kill draws are reproducible."""
+    variables.rng = np.random.default_rng(0)
+    return variables.rng
+
+
+class TestAbioticGetMaskKill:
+    """Deterministic-count culling used by the instant_deterministic shape."""
+
+    def test_kills_exact_fraction_at_period(self, seeded_rng):
+        """At a period boundary, exactly floor(amplitude * N) individuals die."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.4, period=50)
+        mask = ab.get_mask_kill(step=50, ages=np.arange(100))
+        assert mask.sum() == 40
+
+    def test_fraction_is_floored(self, seeded_rng):
+        """The kill count floors the fraction (0.4 * 101 -> 40)."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.4, period=50)
+        mask = ab.get_mask_kill(step=50, ages=np.arange(101))
+        assert mask.sum() == 40
+
+    def test_no_kill_off_period(self, seeded_rng):
+        """Between period boundaries nobody is culled."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.4, period=50)
+        assert ab.get_mask_kill(step=25, ages=np.arange(100)).sum() == 0
+
+    def test_no_kill_at_step_zero(self, seeded_rng):
+        """Step 0 is never a cull step."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.4, period=50)
+        assert ab.get_mask_kill(step=0, ages=np.arange(100)).sum() == 0
+
+    def test_amplitude_one_kills_all(self, seeded_rng):
+        """Amplitude 1 culls the entire living population."""
+        ab = _make_abiotic("instant_deterministic", amplitude=1.0, period=50)
+        assert ab.get_mask_kill(step=50, ages=np.arange(100)).all()
+
+    def test_amplitude_zero_kills_none(self, seeded_rng):
+        """Amplitude 0 culls nobody even at a period boundary."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.0, period=50)
+        assert ab.get_mask_kill(step=50, ages=np.arange(100)).sum() == 0
+
+    def test_empty_population(self, seeded_rng):
+        """An empty population yields an empty mask."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.4, period=50)
+        assert ab.get_mask_kill(step=50, ages=np.array([])).sum() == 0
+
+    def test_reproducible_victims(self):
+        """The same seed selects the same victims."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.4, period=50)
+        variables.rng = np.random.default_rng(123)
+        m1 = ab.get_mask_kill(step=50, ages=np.arange(100))
+        variables.rng = np.random.default_rng(123)
+        m2 = ab.get_mask_kill(step=50, ages=np.arange(100))
+        np.testing.assert_array_equal(m1, m2)

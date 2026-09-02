@@ -5,6 +5,8 @@ import math
 import logging
 import numpy as np
 
+from aegis_sim import variables
+
 
 class Abiotic:
     """
@@ -49,6 +51,28 @@ class Abiotic:
 
     def __call__(self, step):
         return self.func(step) + self.ABIOTIC_HAZARD_OFFSET
+
+    def get_mask_kill(self, step, ages):
+        """Deterministically cull a fixed fraction of the living population.
+
+        Used with the 'instant_deterministic' hazard shape. At each period
+        boundary (excluding step 0), exactly ``floor(ABIOTIC_HAZARD_AMPLITUDE * N)``
+        individuals are killed, chosen uniformly at random; every other step
+        nobody is killed. Returns a boolean kill mask.
+        """
+        n = len(ages)
+        mask = np.zeros(n, dtype=np.bool_)
+        if n == 0 or step == 0 or step % self.ABIOTIC_HAZARD_PERIOD:
+            return mask
+        n_kill = int(math.floor(self.ABIOTIC_HAZARD_AMPLITUDE * n))
+        if n_kill <= 0:
+            return mask
+        if n_kill >= n:
+            mask[:] = True
+            return mask
+        victims = variables.rng.choice(n, size=n_kill, replace=False)
+        mask[victims] = True
+        return mask
 
     def _flat(self, step):
         return self.ABIOTIC_HAZARD_AMPLITUDE
