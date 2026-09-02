@@ -32,6 +32,7 @@ def init(self, parametermanager):
     starvation.init(
         STARVATION_MORTALITY_FACTOR=parametermanager.parameters.STARVATION_MORTALITY_FACTOR,
         STARVATION_MORTALITY_MAXIMUM=parametermanager.parameters.STARVATION_MORTALITY_MAXIMUM,
+        STARVATION_RESPONSE=parametermanager.parameters.STARVATION_RESPONSE,
     )
     self.infection = Infection(
         BACKGROUND_INFECTIVITY=parametermanager.parameters.BACKGROUND_INFECTIVITY,

@@ -40,9 +40,10 @@ class Starvation:
     immune to starvation mortality (until they hatch).
     """
 
-    def init(self, STARVATION_MORTALITY_MAXIMUM, STARVATION_MORTALITY_FACTOR):
+    def init(self, STARVATION_MORTALITY_MAXIMUM, STARVATION_MORTALITY_FACTOR, STARVATION_RESPONSE="default"):
         self.STARVATION_MORTALITY_MAXIMUM = STARVATION_MORTALITY_MAXIMUM
         self.STARVATION_MORTALITY_FACTOR = STARVATION_MORTALITY_FACTOR
+        self.STARVATION_RESPONSE = STARVATION_RESPONSE
         self.consecutive_overshoot_n = 0
 
     def get_mask_kill(self, ages, resources_scavenged):
@@ -54,6 +55,13 @@ class Starvation:
             return np.zeros(population_size, dtype=np.bool_)
         else:
             self.consecutive_overshoot_n += 1
+
+        # Treadmill responses deterministically bring the population down to the
+        # number of available resources in one step, choosing victims by age.
+        if self.STARVATION_RESPONSE == "treadmill_zoomer":
+            return self._treadmill_zoomer(ages, resources_scavenged)
+        elif self.STARVATION_RESPONSE == "treadmill_boomer":
+            return self._treadmill_boomer(ages, resources_scavenged)
 
         # Compute mortality
         if self.STARVATION_MORTALITY_FACTOR is None:
@@ -142,29 +150,33 @@ class Starvation:
     # #     mask[indices] = False
     # #     return mask
 
-    # @staticmethod
-    # def _treadmill_boomer(n, resource_availability):
-    #     """Kill the oldest individuals.
+    @staticmethod
+    def _treadmill_boomer(ages, resources_scavenged):
+        """Kill the oldest individuals, sparing the youngest.
 
-    #     The population size is brought down to the maximum allowed size in one go.
+        The population is brought down to the number of available resources in
+        one step; the survivors are the youngest ``int(resources_scavenged)``.
+        """
+        n = len(ages)
+        n_survive = int(resources_scavenged)
+        survivors = np.argsort(ages, kind="stable")[:n_survive]
+        mask = np.ones(n, dtype=np.bool_)
+        mask[survivors] = False
+        return mask
 
-    #     NOTE: Why `-resource_availability :`? Because old individuals are at the beginning of the population array.
-    #     """
-    #     mask = np.ones(n, dtype=np.bool_)
-    #     mask[-int(resource_availability) :] = False
-    #     return mask
+    @staticmethod
+    def _treadmill_zoomer(ages, resources_scavenged):
+        """Kill the youngest individuals, sparing the oldest.
 
-    # @staticmethod
-    # def _treadmill_zoomer(n, resource_availability):
-    #     """Kill the youngest individuals.
-
-    #     The population size is brought down to the maximum allowed size in one go.
-
-    #     NOTE: Why `: resource_availability`? Because young individuals are appended to the end of the population array.
-    #     """
-    #     mask = np.ones(n, dtype=np.bool_)
-    #     mask[: int(resource_availability)] = False
-    #     return mask
+        The population is brought down to the number of available resources in
+        one step; the survivors are the oldest ``int(resources_scavenged)``.
+        """
+        n = len(ages)
+        n_survive = int(resources_scavenged)
+        survivors = np.argsort(ages, kind="stable")[::-1][:n_survive]
+        mask = np.ones(n, dtype=np.bool_)
+        mask[survivors] = False
+        return mask
 
     # def _treadmill_boomer_soft(self, n, resource_availability):
     #     """Kill older individuals more.

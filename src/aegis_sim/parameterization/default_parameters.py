@@ -183,37 +183,17 @@ DEFAULT_PARAMETERS = {
     #
     #
     # STARVATION
-    # "STARVATION_RESPONSE": Parameter(
-    #     key="STARVATION_RESPONSE",
-    #     name="",
-    #     domain="starvation",
-    #     default="worsening_proportional",
-    #     info="Mechanism for determining who dies under overcrowding conditions",
-    #     info_extended="The possible modes can differ in the age distribution of mortality and/or the number of individuals removed.",
-    #     dtype=str,
-    #     drange="{gradual, cliff, treadmill_random, treadmill_zoomer, treadmill_boomer, treadmill_boomer_soft, treadmill_zoomer_soft, worsening_proportional}",
-    #     inrange=lambda x: x
-    #     in (
-    #         "gradual",
-    #         # "cliff",
-    #         "treadmill_random",
-    #         "treadmill_zoomer",
-    #         "treadmill_boomer",
-    #         "treadmill_boomer_soft",
-    #         "treadmill_zoomer_soft",
-    #         "worsening_proportional",
-    #     ),
-    #     evalrange=[
-    #         "gradual",
-    #         # "cliff",
-    #         "treadmill_random",
-    #         "treadmill_zoomer",
-    #         "treadmill_boomer",
-    #         "treadmill_boomer_soft",
-    #         "treadmill_zoomer_soft",
-    #         "worsening_proportional",
-    #     ],
-    # ),
+    "STARVATION_RESPONSE": Parameter(
+        key="STARVATION_RESPONSE",
+        name="",
+        domain="starvation",
+        default="default",
+        info="Mechanism for determining who dies under overcrowding conditions",
+        info_extended="'default' applies the resource-deficit / consecutive-overshoot mortality (see STARVATION_MORTALITY_FACTOR), modified by age via frailty. 'treadmill_zoomer' deterministically removes the youngest individuals and 'treadmill_boomer' the oldest, in each case bringing the population down to the available resources in a single step.",
+        dtype=str,
+        drange="{default, treadmill_zoomer, treadmill_boomer}",
+        inrange=lambda x: x in ("default", "treadmill_zoomer", "treadmill_boomer"),
+    ),
     "STARVATION_MORTALITY_FACTOR": Parameter(
         key="STARVATION_MORTALITY_FACTOR",
         name="",
