@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from aegis_sim import variables
+from aegis_sim.parameterization.default_parameters import DEFAULT_PARAMETERS
 from aegis_sim.submodels.abiotic import Abiotic
 
 
@@ -229,3 +230,43 @@ class TestAbioticGetMaskKill:
         variables.rng = np.random.default_rng(123)
         m2 = ab.get_mask_kill(step=50, ages=np.arange(100))
         np.testing.assert_array_equal(m1, m2)
+
+
+class TestAbioticSpareOldest:
+    """spare_oldest culls the youngest individuals so the oldest survive."""
+
+    def test_kills_youngest(self):
+        """The youngest n_kill individuals die; the oldest survive."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.4, period=50)
+        ages = np.array([5, 1, 3, 4, 2])  # n_kill = floor(0.4 * 5) = 2
+        mask = ab.get_mask_kill(step=50, ages=ages, spare_oldest=True)
+        np.testing.assert_array_equal(mask, [False, True, False, False, True])
+
+    def test_same_count_as_random(self):
+        """spare_oldest culls the same number as the random policy."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.3, period=50)
+        mask = ab.get_mask_kill(step=50, ages=np.arange(100), spare_oldest=True)
+        assert mask.sum() == 30
+
+    def test_deterministic_without_rng(self):
+        """spare_oldest does not consult the RNG, so repeated calls match."""
+        ab = _make_abiotic("instant_deterministic", amplitude=0.4, period=50)
+        ages = np.array([9, 1, 8, 2, 7, 3])  # n_kill = floor(0.4 * 6) = 2
+        m1 = ab.get_mask_kill(step=50, ages=ages, spare_oldest=True)
+        m2 = ab.get_mask_kill(step=50, ages=ages, spare_oldest=True)
+        np.testing.assert_array_equal(m1, m2)
+        np.testing.assert_array_equal(m1, [False, True, False, True, False, False])
+
+
+class TestAbioticCullSpareOldestParameter:
+    """The ABIOTIC_CULL_SPARE_OLDEST parameter validates its allowed values."""
+
+    def test_default_is_false(self):
+        """The default preserves the random cull behaviour."""
+        assert DEFAULT_PARAMETERS["ABIOTIC_CULL_SPARE_OLDEST"].default is False
+
+    def test_accepts_bools(self):
+        """Both boolean values pass validation."""
+        param = DEFAULT_PARAMETERS["ABIOTIC_CULL_SPARE_OLDEST"]
+        assert param.valid(True)
+        assert param.valid(False)

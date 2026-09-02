@@ -52,13 +52,15 @@ class Abiotic:
     def __call__(self, step):
         return self.func(step) + self.ABIOTIC_HAZARD_OFFSET
 
-    def get_mask_kill(self, step, ages):
+    def get_mask_kill(self, step, ages, spare_oldest=False):
         """Deterministically cull a fixed fraction of the living population.
 
         Used with the 'instant_deterministic' hazard shape. At each period
         boundary (excluding step 0), exactly ``floor(ABIOTIC_HAZARD_AMPLITUDE * N)``
-        individuals are killed, chosen uniformly at random; every other step
-        nobody is killed. Returns a boolean kill mask.
+        individuals are killed; every other step nobody is killed. Victims are
+        chosen uniformly at random, or, when ``spare_oldest`` is True, the
+        youngest ``n_kill`` individuals are culled so the oldest survive.
+        Returns a boolean kill mask.
         """
         n = len(ages)
         mask = np.zeros(n, dtype=np.bool_)
@@ -70,7 +72,10 @@ class Abiotic:
         if n_kill >= n:
             mask[:] = True
             return mask
-        victims = variables.rng.choice(n, size=n_kill, replace=False)
+        if spare_oldest:
+            victims = np.argsort(ages, kind="stable")[:n_kill]
+        else:
+            victims = variables.rng.choice(n, size=n_kill, replace=False)
         mask[victims] = True
         return mask
 

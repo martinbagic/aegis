@@ -589,6 +589,17 @@ DEFAULT_PARAMETERS = {
         inrange=lambda x: x
         in {"sinusoidal", "flat", "triangle", "square", "sawtooth", "ramp", "instant", "instant_fatal", "instant_deterministic"},
     ),
+    "ABIOTIC_CULL_SPARE_OLDEST": Parameter(
+        key="ABIOTIC_CULL_SPARE_OLDEST",
+        name="",
+        domain="abiotic",
+        default=False,
+        info="Under the instant_deterministic cull, spare the oldest individuals",
+        info_extended="When True, the instant_deterministic abiotic cull removes the youngest individuals first so that the oldest survive; when False, victims are chosen uniformly at random. Only relevant for the 'instant_deterministic' hazard shape.",
+        dtype=bool,
+        drange="{True, False}",
+        inrange=lambda x: x in (True, False),
+    ),
     #
     #
     # INFECTION
