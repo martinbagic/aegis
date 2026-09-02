@@ -1021,6 +1021,17 @@ DEFAULT_PARAMETERS = {
         evalrange=[None, 1000000],
         previous_keys=["CARRYING_CAPACITY_EGGS"],
     ),
+    "EGG_REPLACEMENT_MODE": Parameter(
+        key="EGG_REPLACEMENT_MODE",
+        name="",
+        domain="other",
+        default="fifo",
+        info="Which eggs are evicted when the egg carrying capacity is exceeded",
+        info_extended="'fifo' evicts the oldest eggs first (first-laid, first-out). 'random' evicts a uniformly random subset. Only relevant when CARRYING_CAPACITY_EGGS is set.",
+        dtype=str,
+        drange="{fifo, random}",
+        inrange=lambda x: x in ("fifo", "random"),
+    ),
     "INITIAL_POPULATION_SIZE": Parameter(
         key="INITIAL_POPULATION_SIZE",
         name="",
