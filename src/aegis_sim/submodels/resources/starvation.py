@@ -151,29 +151,44 @@ class Starvation:
     # #     return mask
 
     @staticmethod
-    def _treadmill_boomer(ages, resources_scavenged):
+    def _rank_by_age(ages, oldest_first):
+        """Indices ordered by age with ties broken at random.
+
+        A plain (stable) argsort breaks ties by array position, and array position is
+        laying order, so among same-aged individuals it would systematically favour
+        the offspring of parents that laid earlier or later in the season. Shuffle
+        first so that the only ordering criterion is age.
+        """
+        perm = variables.rng.permutation(len(ages))
+        order = perm[np.argsort(ages[perm], kind="stable")]
+        return order[::-1] if oldest_first else order
+
+    @classmethod
+    def _treadmill_boomer(cls, ages, resources_scavenged):
         """Kill the oldest individuals, sparing the youngest.
 
         The population is brought down to the number of available resources in
-        one step; the survivors are the youngest ``int(resources_scavenged)``.
+        one step; the survivors are the youngest ``int(resources_scavenged)``;
+        ties within an age class are resolved at random.
         """
         n = len(ages)
         n_survive = int(resources_scavenged)
-        survivors = np.argsort(ages, kind="stable")[:n_survive]
+        survivors = cls._rank_by_age(ages, oldest_first=False)[:n_survive]
         mask = np.ones(n, dtype=np.bool_)
         mask[survivors] = False
         return mask
 
-    @staticmethod
-    def _treadmill_zoomer(ages, resources_scavenged):
+    @classmethod
+    def _treadmill_zoomer(cls, ages, resources_scavenged):
         """Kill the youngest individuals, sparing the oldest.
 
         The population is brought down to the number of available resources in
-        one step; the survivors are the oldest ``int(resources_scavenged)``.
+        one step; the survivors are the oldest ``int(resources_scavenged)``;
+        ties within an age class are resolved at random.
         """
         n = len(ages)
         n_survive = int(resources_scavenged)
-        survivors = np.argsort(ages, kind="stable")[::-1][:n_survive]
+        survivors = cls._rank_by_age(ages, oldest_first=True)[:n_survive]
         mask = np.ones(n, dtype=np.bool_)
         mask[survivors] = False
         return mask
