@@ -92,4 +92,6 @@ def init(self, parametermanager):
         THRESHOLD=parametermanager.parameters.THRESHOLD,
         ENVDRIFT_RATE=parametermanager.parameters.ENVDRIFT_RATE,
         MODIF_GENOME_SIZE=parametermanager.parameters.MODIF_GENOME_SIZE,
+        HEADSUP=parametermanager.parameters.HEADSUP,
+        MATURATION_AGE=parametermanager.parameters.MATURATION_AGE,
     )

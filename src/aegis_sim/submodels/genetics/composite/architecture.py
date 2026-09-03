@@ -21,8 +21,10 @@ class CompositeArchitecture:
 
     """
 
-    def __init__(self, BITS_PER_LOCUS, AGE_LIMIT, THRESHOLD):
+    def __init__(self, BITS_PER_LOCUS, AGE_LIMIT, THRESHOLD, HEADSUP=-1, MATURATION_AGE=0):
         self.BITS_PER_LOCUS = BITS_PER_LOCUS
+        # number of leading survival/reproduction loci forced to all-ones at init (None = no guarantee)
+        self.headsup = (MATURATION_AGE + HEADSUP) if HEADSUP > -1 else None
         self.n_loci = sum(trait.length for trait in parameterization.traits.values())
         self.length = self.n_loci * BITS_PER_LOCUS
         self.AGE_LIMIT = AGE_LIMIT
@@ -46,6 +48,15 @@ class CompositeArchitecture:
 
         for trait in parameterization.traits.values():
             array[:, :, trait.slice] = array[:, :, trait.slice] < trait.initgeno
+
+        # HEADSUP guarantee: founders survive and reproduce through the first
+        # MATURATION_AGE + HEADSUP ages regardless of initgeno; later ages stay random.
+        if self.headsup is not None:
+            for name in ("surv", "repr"):
+                trait = parameterization.traits[name]
+                if trait.evolvable and trait.length > 0:
+                    n = min(self.headsup, trait.length)
+                    array[:, :, trait.start : trait.start + n] = 1
 
         return array
 

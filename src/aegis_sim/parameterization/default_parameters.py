@@ -589,6 +589,18 @@ DEFAULT_PARAMETERS = {
         inrange=lambda x: x
         in {"sinusoidal", "flat", "triangle", "square", "sawtooth", "ramp", "instant", "instant_fatal", "instant_deterministic"},
     ),
+    "HEADSUP": Parameter(
+        key="HEADSUP",
+        name="",
+        domain="composite genetic architecture",
+        default=-1,
+        info="-1 for no guarantee; otherwise set the first MATURATION_AGE + HEADSUP survival and reproduction loci to all-ones at initialization",
+        info_extended="Initialization guarantee for the composite architecture (restored from the pre-2024 AEGIS). After the random initgeno draw, every bit of the first MATURATION_AGE + HEADSUP loci of the survival and reproduction traits is set to 1, so the founders are guaranteed to survive and reproduce through age MATURATION_AGE + HEADSUP - 1 while all later ages keep their initgeno draw. Combine with a low G_surv_initgeno (e.g. 0) to start from a genome that must evolve longevity from scratch. -1 disables the guarantee.",
+        dtype=int,
+        drange="{-1, 0, [1, inf)}",
+        inrange=lambda x: x in (-1, 0) or x >= 1,
+        show_in_gui=False,
+    ),
     "ABIOTIC_CULL_SPARE_OLDEST": Parameter(
         key="ABIOTIC_CULL_SPARE_OLDEST",
         name="",

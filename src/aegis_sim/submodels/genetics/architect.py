@@ -11,7 +11,7 @@ from aegis_sim.dataclasses.phenotypes import Phenotypes
 class Architect:
     """Wrapper for a genetic architecture"""
 
-    def __init__(self, BITS_PER_LOCUS, PHENOMAP, AGE_LIMIT, THRESHOLD, ENVDRIFT_RATE, GENARCH_TYPE, MODIF_GENOME_SIZE):
+    def __init__(self, BITS_PER_LOCUS, PHENOMAP, AGE_LIMIT, THRESHOLD, ENVDRIFT_RATE, GENARCH_TYPE, MODIF_GENOME_SIZE, HEADSUP=-1, MATURATION_AGE=0):
 
         assert GENARCH_TYPE in ("modifying", "composite")
 
@@ -30,6 +30,8 @@ class Architect:
                 BITS_PER_LOCUS=BITS_PER_LOCUS,
                 AGE_LIMIT=AGE_LIMIT,
                 THRESHOLD=THRESHOLD,
+                HEADSUP=HEADSUP,
+                MATURATION_AGE=MATURATION_AGE,
             )
         self.architecture = architecture
         self.envdrift = Envdrift(ENVDRIFT_RATE=ENVDRIFT_RATE, genome_shape=self.architecture.get_shape())
