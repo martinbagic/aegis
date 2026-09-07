@@ -197,9 +197,13 @@ class Bioreactor:
         
         capacity = parametermanager.parameters.CARRYING_CAPACITY_EGGS
         if capacity is not None and len(self.eggs) > capacity:
-            if parametermanager.parameters.EGG_REPLACEMENT_MODE == "random":
+            mode = parametermanager.parameters.EGG_REPLACEMENT_MODE
+            if mode == "random":
                 indices = variables.rng.choice(len(self.eggs), size=capacity, replace=False)
-            else:
+            elif mode == "lifo":
+                # keep the oldest eggs: the pool fills at the start of the season and later eggs are evicted
+                indices = np.arange(len(self.eggs))[:capacity]
+            else:  # fifo: keep the newest eggs, evict the oldest
                 indices = np.arange(len(self.eggs))[-capacity:]
             self.eggs *= indices
 

@@ -1050,10 +1050,10 @@ DEFAULT_PARAMETERS = {
         domain="other",
         default="fifo",
         info="Which eggs are evicted when the egg carrying capacity is exceeded",
-        info_extended="'fifo' evicts the oldest eggs first (first-laid, first-out). 'random' evicts a uniformly random subset. Only relevant when CARRYING_CAPACITY_EGGS is set.",
+        info_extended="'fifo' evicts the oldest eggs first (first-laid, first-out; the pool holds the last eggs of the season). 'lifo' evicts the newest eggs first (last-laid, first-out; the pool holds the first eggs of the season). 'random' evicts a uniformly random subset. Only relevant when CARRYING_CAPACITY_EGGS is set.",
         dtype=str,
-        drange="{fifo, random}",
-        inrange=lambda x: x in ("fifo", "random"),
+        drange="{fifo, lifo, random}",
+        inrange=lambda x: x in ("fifo", "lifo", "random"),
     ),
     "INITIAL_POPULATION_SIZE": Parameter(
         key="INITIAL_POPULATION_SIZE",
