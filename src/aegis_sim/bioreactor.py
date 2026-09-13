@@ -168,13 +168,14 @@ class Bioreactor:
         ]
         muta_prob = np.repeat(muta_prob, num_repr[mask_repr])
 
-        offspring_genomes = submodels.reproduction.generate_offspring_genomes(
+        offspring_genomes, offspring_parental_ages = submodels.reproduction.generate_offspring_genomes(
             genomes=parental_genomes,
             muta_prob=muta_prob,
             ages=ages_repr,
             parental_sexes=parental_sexes,
         )
         offspring_sexes = submodels.sexsystem.get_sex(len(offspring_genomes))
+        offspring_parental_ages = np.asarray(offspring_parental_ages)
 
         # Randomize order of newly laid egg attributes ..
         # .. because the order will affect their probability to be removed because of limited carrying capacity
@@ -182,6 +183,7 @@ class Bioreactor:
         variables.rng.shuffle(order)
         offspring_genomes = offspring_genomes[order]
         offspring_sexes = offspring_sexes[order]
+        offspring_parental_ages = offspring_parental_ages[order]
 
         # Make eggs
         eggs = Population.make_eggs(
@@ -189,6 +191,7 @@ class Bioreactor:
             step=variables.steps,
             offspring_sexes=offspring_sexes,
             parental_generations=np.zeros(len(offspring_sexes)),  # TODO replace with working calculation
+            parental_ages=offspring_parental_ages,
         )
         if self.eggs is None:
             self.eggs = eggs
@@ -239,7 +242,17 @@ class Bioreactor:
                 self.eggs = None
                 return
             elif remaining_capacity < len(self.eggs):
-                indices = variables.rng.choice(len(self.eggs), size=int(remaining_capacity), replace=False)
+                pref = parametermanager.parameters.REPRODUCTIVE_PREFERENCE
+                rc = int(remaining_capacity)
+                if pref in ("oldest", "youngest") and self.eggs.parental_ages is not None:
+                    # Retain the eggs of the oldest (or youngest) parents; ties are broken by
+                    # the random order in which the eggs were laid.
+                    order = np.argsort(self.eggs.parental_ages, kind="stable")
+                    if pref == "oldest":
+                        order = order[::-1]
+                    indices = order[:rc]
+                else:
+                    indices = variables.rng.choice(len(self.eggs), size=rc, replace=False)
                 self.eggs *= indices
 
         # If something to hatch

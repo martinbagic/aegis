@@ -280,6 +280,17 @@ DEFAULT_PARAMETERS = {
         inrange=lambda x: x >= -1,
         presets={},
     ),
+    "REPRODUCTIVE_PREFERENCE": Parameter(
+        key="REPRODUCTIVE_PREFERENCE",
+        name="",
+        domain="reproduction",
+        default="none",
+        info="Age preference in mating and egg survival",
+        info_extended="'none' pairs maters at random and, under REPRODUCTION_REGULATION, culls surplus eggs at random. 'oldest' pairs the oldest maters together and, when the egg budget is exceeded, retains the eggs of the oldest parents. 'youngest' does the reverse. Active only for sexual reproduction; egg retention additionally requires REPRODUCTION_REGULATION.",
+        dtype=str,
+        drange="{none, oldest, youngest}",
+        inrange=lambda x: x in ("none", "oldest", "youngest"),
+    ),
     "MATURATION_AGE": Parameter(
         key="MATURATION_AGE",
         name="",

@@ -39,4 +39,6 @@ class Reproducer:
 
         genomes = self.mutator._mutate(genomes, muta_prob, ages)
         genomes = Genomes(genomes)
-        return genomes
+        # `ages` now holds the per-offspring parental age (female parent for sexual,
+        # the reproducing individual for asexual); return it for age-preferential eggs.
+        return genomes, ages

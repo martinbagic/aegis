@@ -36,6 +36,7 @@ class Population:
         sizes,
         sexes,
         generations=None,
+        parental_ages=None,
     ):
         self.genomes = genomes
         self.ages = ages
@@ -46,6 +47,7 @@ class Population:
         self.sizes = sizes
         self.sexes = sexes
         self.generations = generations
+        self.parental_ages = parental_ages
 
         assert isinstance(phenotypes, Phenotypes)
 
@@ -78,6 +80,7 @@ class Population:
             sizes=self.sizes[index],
             sexes=self.sexes[index],
             generations=self.generations[index] if self.generations is not None else None,
+            parental_ages=self.parental_ages[index] if self.parental_ages is not None else None,
         )
 
     def __imul__(self, index):
@@ -91,6 +94,8 @@ class Population:
                 self.generations = None
             else:
                 setattr(self, attr, getattr(self, attr)[index])
+        if self.parental_ages is not None:
+            self.parental_ages = self.parental_ages[index]
         return self
 
     def __iadd__(self, population):
@@ -107,6 +112,10 @@ class Population:
             else:
                 val = np.concatenate([getattr(self, attr), getattr(population, attr)])
                 setattr(self, attr, val)
+        if self.parental_ages is None or population.parental_ages is None:
+            self.parental_ages = None
+        else:
+            self.parental_ages = np.concatenate([self.parental_ages, population.parental_ages])
         return self
 
     # def shuffle(self):
@@ -152,7 +161,7 @@ class Population:
         )
 
     @staticmethod
-    def make_eggs(offspring_genomes: Genomes, step, offspring_sexes, parental_generations):
+    def make_eggs(offspring_genomes: Genomes, step, offspring_sexes, parental_generations, parental_ages=None):
         n = len(offspring_genomes)
         eggs = Population(
             genomes=offspring_genomes,
@@ -166,5 +175,6 @@ class Population:
             infection=np.zeros(n, dtype=np.int32),
             sizes=np.zeros(n, dtype=np.float32),
             sexes=offspring_sexes,
+            parental_ages=None if parental_ages is None else np.asarray(parental_ages),
         )
         return eggs

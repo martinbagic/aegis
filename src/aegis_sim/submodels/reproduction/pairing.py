@@ -3,6 +3,7 @@ from numba import njit, prange
 from aegis_sim import variables
 from aegis_sim.dataclasses.genomes import Genomes
 from aegis_sim import submodels
+from aegis_sim.parameterization import parametermanager
 
 
 @njit(parallel=True)
@@ -34,8 +35,9 @@ def _assemble_children(genome_array, males, females, male_gamete_idx, female_gam
 def pairing(genomes: Genomes, parental_sexes, ages, muta_prob):
     """Return assorted chromatids."""
 
-    # Get pairs
-    males, females = submodels.matingmanager.pair_up_polygamously(parental_sexes)
+    # Get pairs (age-assortative if a reproductive preference is set)
+    preference = parametermanager.parameters.REPRODUCTIVE_PREFERENCE
+    males, females = submodels.matingmanager.pair_up_polygamously(parental_sexes, ages, preference)
     assert len(males) == len(females)
     n_pairs = len(males)
 
