@@ -149,24 +149,57 @@ class Bioreactor:
         if sum(num_repr) == 0:
             return
 
-        # Indices of reproducing individuals
+        # Indices of reproducing individuals (one entry per prospective egg)
         who = np.repeat(np.arange(len(self.population)), num_repr)
-
-        # Count ages at reproduction
         ages_repr = self.population.ages[who]
-        recordingmanager.flushrecorder.collect("age_at_birth", ages_repr)
 
-        # Increase births statistics
-        self.population.births += num_repr
-
-        # Generate offspring genomes
-        parental_genomes = self.population.genomes.get(individuals=who)
-        parental_sexes = self.population.sexes[who]
-
+        # Per-egg mutation probability (aligned with `who`)
         muta_prob = self.population.phenotypes.extract(ages=self.population.ages, trait_name="muta", part=mask_repr)[
             mask_repr
         ]
         muta_prob = np.repeat(muta_prob, num_repr[mask_repr])
+
+        # --- Produce only the eggs that will actually hatch ---
+        # Under REPRODUCTION_REGULATION births are capped at carrying capacity. Instead of
+        # generating every egg and culling the surplus in hatch(), we filter the prospective
+        # eggs here, so recorded fertility reflects realized recruitment and no genomes are
+        # generated for eggs that would be discarded. Selection matches the hatch() cull:
+        # random for 'none', by parental age for 'oldest'/'youngest'. Scoped to
+        # INCUBATION_PERIOD == 0 (eggs hatch the same step); the delayed-hatch path keeps
+        # the hatch()-time cull unchanged.
+        if (
+            parametermanager.parameters.REPRODUCTION_REGULATION
+            and parametermanager.parameters.INCUBATION_PERIOD == 0
+        ):
+            # age() runs next and removes individuals reaching AGE_LIMIT; project the
+            # post-age population so the cap equals what hatch() would compute.
+            surviving = int(np.sum((self.population.ages + 1) < parametermanager.parameters.AGE_LIMIT))
+            remaining_capacity = int(resources.capacity) - surviving
+            if remaining_capacity < 1:
+                return  # no room for any offspring this step
+            if remaining_capacity < len(who):
+                pref = parametermanager.parameters.REPRODUCTIVE_PREFERENCE
+                if pref in ("oldest", "youngest"):
+                    # keep eggs of the oldest/youngest parents; break age ties at random
+                    tiebreak = variables.rng.random(len(who))
+                    order = np.lexsort((tiebreak, ages_repr))
+                    if pref == "oldest":
+                        order = order[::-1]
+                    keep = order[:remaining_capacity]
+                else:
+                    keep = variables.rng.choice(len(who), size=remaining_capacity, replace=False)
+                keep = np.sort(keep)
+                who = who[keep]
+                ages_repr = ages_repr[keep]
+                muta_prob = muta_prob[keep]
+
+        # Realized reproduction statistics (only the eggs that will hatch)
+        recordingmanager.flushrecorder.collect("age_at_birth", ages_repr)
+        self.population.births += np.bincount(who, minlength=len(self.population))
+
+        # Generate offspring genomes
+        parental_genomes = self.population.genomes.get(individuals=who)
+        parental_sexes = self.population.sexes[who]
 
         offspring_genomes, offspring_parental_ages = submodels.reproduction.generate_offspring_genomes(
             genomes=parental_genomes,
